@@ -1,0 +1,99 @@
+{
+  "GlobalConfiguration": {
+    //"BaseUrl": "https://api.mybusiness.com",
+    "ReRouteIsCaseSensitive": false, //路徑是否區分大小寫,
+    "RateLimitOptions": {
+      "DisableRateLimitHeaders": false, //代表是否禁用X-Rate-Limit和Retry-After標頭
+      "QuotaExceededMessage": "too many requests...", //代表請求達到上限時返回給客戶端的消息
+      "HttpStatusCode": 999, //代表請求達到上限時返回給客戶端的HTTP狀態代碼
+      "ClientIdHeader": "Test" //可以允許自定義用於標識客戶端的標頭，默認情況下為"ClientId"
+    }
+  },
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/todo/{todoUrl}", //下游Service端路徑
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [ // Service ip 和 Port，如果有LoadBalancer則設置多個
+        {
+          "Host": "localhost",
+          "Port": 44360
+        }
+        //,{
+        //  "Host": "10.0.1.11",
+        //  "Port": 5000
+        //}
+      ],
+
+      "UpstreamPathTemplate": "/todo/{todoUrl}", //Client端請求路徑
+      "UpstreamHttpMethod": [ "Get", "Post", "PUT" ], //允許的HTTP請求方法，可以寫多個
+      //"UpstreamHost": "a.jessetalk.cn",//指定IP
+      //"Priority": 0, //優先順序(0開始),優先順序大的會被先選擇(1>0)
+      "AuthenticationOptions": { //Token驗證
+        "AuthenticationProviderKey": "IdentityApiKey",
+        "AllowedScopes": [] //AllowedScopes: 該客戶端支援訪問的下游服務列表，必須是在ApiResources列表中登記的
+      },
+
+      /*
+        負載平衡算法:
+        LeastConnection：根據服務正在處理請求量的情況來決定哪個服務來處理新請求，即將新請求傳送到具有最少現有請求的服務去處理。演算法狀態沒有分佈在Ocelot叢集中。
+        RoundRobin：遍歷可用服務併發送請求。演算法狀態沒有分佈在Ocelot叢集中。
+        NoLoadBalancer：從配置或服務發現中獲取第一個可用服務來處理新請求。
+        CookieStickySessions：通過使用Cookie，確保特定的請求能夠被分配到特定的服務上進行處理。
+      */
+      "LoadBalancerOptions": {
+        "Type": "NoLoadBalancer"
+      },
+
+      //限流配置
+      "RateLimitOptions": {
+        "ClientWhitelist": [ "todo" ], //白名單不受限流影響
+        "EnableRateLimiting": true, //是否啟用限流
+        "Period": "1s", //標識限流作用於的時間段， 例如： 1s, 5m, 1h,1d 等。如果在這個時間段內訪問的次數超過了限制，需要等PeriodTimespan這麼久才能再次發起請求
+        "PeriodTimespan": 1, //單位為秒，這個值標識要多少秒後才能重試
+        "Limit": 1 //標識在指定的Period時間段裡面最大能請求多少次
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/{userUrl}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 44360
+        }
+      ],
+      "UpstreamPathTemplate": "/user/{userUrl}",
+      "UpstreamHttpMethod": [ "POST", "PUT", "GET" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "IdentityApiKey",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/qos",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 44360
+        }
+      ],
+      "UpstreamPathTemplate": "/qos",
+      "UpstreamHttpMethod": [ "POST", "PUT", "GET" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "IdentityApiKey",
+        "AllowedScopes": []
+      },
+
+      //熔斷(根據官網檔案說明，如果路由配置里面不加入QoSOptions選項，則不使用熔斷功能，但是Ocelot會將在所有下游請求默認為90秒超時，)
+      "QoSOptions": {
+        //該值必須大于0，該值是指當例外發生達到此值會熔斷，
+        "ExceptionsAllowedBeforeBreaking": 2,
+        //該值指熔斷后會保持多久，該值的單位是毫秒，
+        "DurationOfBreak": 5000,
+        //該值指定當請求超過此值會被自動設定為超時，同樣該值的單位是毫秒，
+        "TimeoutValue": 2000
+      }
+    }
+  ]
+}

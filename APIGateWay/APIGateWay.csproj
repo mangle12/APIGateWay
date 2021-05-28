@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Middleware\JWTTokenMiddleware.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.15" />
+    <PackageReference Include="Ocelot" Version="16.0.1" />
+    <PackageReference Include="Ocelot.Provider.Polly" Version="16.0.1" />
+  </ItemGroup>
+
+
+</Project>
